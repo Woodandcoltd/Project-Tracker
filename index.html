@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wood & Co Project Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .timeline-bar {
+            height: 1.5rem;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            position: relative;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
+
+    <!-- Main Application Container -->
+    <div id="app-container" class="container mx-auto p-4 md:p-8 flex flex-col items-center">
+
+        <!-- Header and User Info -->
+        <header class="w-full max-w-4xl flex justify-between items-center mb-6">
+            <h1 id="app-title" class="text-3xl md:text-4xl font-bold text-gray-800 transition-all duration-300">
+                Wood & Co Project Tracker
+            </h1>
+            <div class="flex items-center space-x-2 text-sm text-gray-600">
+                <span class="hidden md:inline">Management:</span>
+                <span id="user-id" class="font-mono text-xs md:text-sm bg-gray-200 rounded-md p-1 truncate max-w-[120px] md:max-w-none cursor-pointer" title="Click to copy">
+                    Loading...
+                </span>
+            </div>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <main id="main-content" class="w-full max-w-4xl p-6 bg-white rounded-2xl shadow-xl transition-all duration-300">
+            <!-- Content will be rendered here by JavaScript -->
+            <div id="loading-indicator" class="flex flex-col items-center justify-center p-12 text-gray-500">
+                <svg class="animate-spin h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="mt-4">Loading application...</span>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="add-project-modal" class="modal">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 md:w-3/5 lg:w-2/5 animate-fade-in-up transform scale-100">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">New Project</h2>
+            <form id="add-project-form" class="space-y-4">
+                <div>
+                    <label for="project-name" class="block text-gray-700 font-medium mb-1">Project Name</label>
+                    <input type="text" id="project-name" name="projectName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="overall-budget" class="block text-gray-700 font-medium mb-1">Overall Project Budget ($)</label>
+                    <input type="number" id="overall-budget" name="overallBudget" min="0" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Budget Sections</label>
+                    <div id="sections-container" class="space-y-2">
+                        <!-- Initial section input -->
+                        <div class="flex items-center space-x-2">
+                            <input type="text" placeholder="Section name (e.g., Materials)" class="section-name flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="number" placeholder="Budgeted amount" min="0" step="0.01" class="section-budget w-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <button type="button" class="remove-section text-red-500 hover:text-red-700 transition-colors duration-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.035 21H7.965a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" id="add-section-btn" class="mt-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors duration-200 font-medium">
+                        + Add another section
+                    </button>
+                </div>
+                <div id="add-project-error-message" class="text-red-500 text-sm mt-2 hidden"></div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-project-btn" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="add-cost-modal" class="modal">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 md:w-3/5 lg:w-2/5">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Cost</h2>
+            <form id="add-cost-form" class="space-y-4">
+                <div>
+                    <label for="cost-section" class="block text-gray-700 font-medium mb-1">Section</label>
+                    <select id="cost-section" name="section" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"></select>
+                </div>
+                <div>
+                    <label for="cost-description" class="block text-gray-700 font-medium mb-1">Description</label>
+                    <input type="text" id="cost-description" name="description" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="cost-amount" class="block text-gray-700 font-medium mb-1">Amount ($)</label>
+                    <input type="number" id="cost-amount" name="amount" min="0" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-cost-btn" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Add Cost</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add Section Modal -->
+    <div id="add-section-modal" class="modal">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 md:w-3/5 lg:w-2/5 animate-fade-in-up transform scale-100">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Add New Section</h2>
+            <form id="add-section-form" class="space-y-4">
+                <div>
+                    <label for="new-section-name" class="block text-gray-700 font-medium mb-1">Section Name</label>
+                    <input type="text" id="new-section-name" name="newSectionName" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="new-section-budget" class="block text-gray-700 font-medium mb-1">Budgeted Amount ($)</label>
+                    <input type="number" id="new-section-budget" name="newSectionBudget" min="0" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-new-section-btn" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Add Section</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Budget Modal -->
+    <div id="edit-budget-modal" class="modal">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 md:w-3/5 lg:w-2/5 animate-fade-in-up transform scale-100">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Edit Project Budgets</h2>
+            <form id="edit-budget-form" class="space-y-4">
+                <div>
+                    <label for="edit-overall-budget" class="block text-gray-700 font-medium mb-1">Overall Project Budget ($)</label>
+                    <input type="number" id="edit-overall-budget" name="editOverallBudget" min="0" step="0.01" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div id="edit-sections-container" class="space-y-4">
+                    <!-- Section budgets will be dynamically added here -->
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-edit-budget-btn" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Save Budgets</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Timeline Modal -->
+    <div id="edit-timeline-modal" class="modal">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-11/12 md:w-4/5 lg:w-3/5 animate-fade-in-up transform scale-100">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">Edit Project Timeline</h2>
+            <form id="edit-timeline-form" class="space-y-6">
+                <div id="timeline-sections-container" class="space-y-6">
+                    <!-- Timeline inputs will be dynamically added here -->
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button type="button" id="cancel-edit-timeline-btn" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200">Cancel</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200">Save Timeline</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Clipboard success message -->
+    <div id="clipboard-toast" class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg hidden">
+        Copied to clipboard!
+    </div>
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Set log level for debugging
+        setLogLevel('debug');
+        
+        // Global variables provided by the Canvas environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // --- Firebase Initialization and Auth ---
+        let app, db, auth;
+        let userId = null;
+        let isAuthReady = false;
+        let firebaseInitialized = false;
+        
+        // State variables and DOM element references
+        let appState = {
+            view: 'dashboard',
+            projectDetailView: 'finance', // 'finance', 'timeline', or 'todo'
+            currentProjectId: null
+        };
+        
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const mainContent = document.getElementById('main-content');
+        const userIdDisplay = document.getElementById('user-id');
+        const addProjectModal = document.getElementById('add-project-modal');
+        const addCostModal = document.getElementById('add-cost-modal');
+        const addProjectForm = document.getElementById('add-project-form');
+        const addCostForm = document.getElementById('add-cost-form');
+        const sectionsContainer = document.getElementById('sections-container');
+        const clipboardToast = document.getElementById('clipboard-toast');
+        const addSectionModal = document.getElementById('add-section-modal');
+        const addSectionForm = document.getElementById('add-section-form');
+        const editBudgetModal = document.getElementById('edit-budget-modal');
+        const editBudgetForm = document.getElementById('edit-budget-form');
+        const editSectionsContainer = document.getElementById('edit-sections-container');
+        const editTimelineModal = document.getElementById('edit-timeline-modal');
+        const editTimelineForm = document.getElementById('edit-timeline-form');
+        const timelineSectionsContainer = document.getElementById('timeline-sections-container');
+
+        function initializeFirebase() {
+            try {
+                if (Object.keys(firebaseConfig).length > 0) {
+                    app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+                    firebaseInitialized = true;
+                } else {
+                    console.error("Firebase config is not available. Please check the Canvas environment.");
+                    if (mainContent && loadingIndicator) {
+                      mainContent.innerHTML = `<div class="p-8 text-center text-red-500">
+                                                  <p>Error: Firebase configuration not found. The application cannot connect to the database.</p>
+                                              </div>`;
+                      loadingIndicator.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to initialize Firebase:", e);
+                if (mainContent && loadingIndicator) {
+                  mainContent.innerHTML = `<div class="p-8 text-center text-red-500">
+                                              <p>Error initializing Firebase. Please check the console for details.</p>
+                                          </div>`;
+                  loadingIndicator.style.display = 'none';
+                }
+            }
+        }
+        
+        initializeFirebase();
+
+        // Handle initial authentication state
+        if (firebaseInitialized) {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    console.log("User signed in with ID:", userId);
+                } else {
+                    // Sign in anonymously if no user is found
+                    try {
+                        if (initialAuthToken) {
+                            const userCredential = await signInWithCustomToken(auth, initialAuthToken);
+                            userId = userCredential.user.uid;
+                            console.log("Signed in with custom token. User ID:", userId);
+                        } else {
+                            const userCredential = await signInAnonymously(auth);
+                            userId = userCredential.user.uid;
+                            console.log("Signed in anonymously. User ID:", userId);
+                        }
+                    } catch (error) {
+                        console.error("Authentication failed:", error);
+                        userId = null;
+                    }
+                }
+                isAuthReady = true;
+                if (userIdDisplay) {
+                    userIdDisplay.textContent = userId;
+                }
+                renderApp();
+            });
+        }
+
+        // --- Main App Logic and Rendering ---
+        function renderApp() {
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            if (appState.view === 'dashboard') {
+                renderDashboard();
+            } else if (appState.view === 'projectDetail' && appState.currentProjectId) {
+                renderProjectDetail(appState.currentProjectId);
+            }
+        }
+        
+        function navigateTo(view, projectId = null, projectDetailView = 'finance') {
+            appState.view = view;
+            appState.currentProjectId = projectId;
+            appState.projectDetailView = projectDetailView;
+            renderApp();
+        }
+
+        function renderDashboard() {
+            mainContent.innerHTML = `
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-800">My Projects</h2>
+                    <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                        <button id="export-btn" class="mt-4 md:mt-0 px-6 py-3 bg-gray-600 text-white rounded-xl font-medium shadow-md hover:bg-gray-700 transition-colors duration-200">
+                           Export to CSV
+                        </button>
+                        <button id="add-project-btn" class="mt-4 md:mt-0 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                            + Add New Project
+                        </button>
+                    </div>
+                </div>
+                <div id="projects-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    <div class="p-4 bg-gray-100 rounded-xl animate-pulse"></div>
+                    <div class="p-4 bg-gray-100 rounded-xl animate-pulse"></div>
+                    <div class="p-4 bg-gray-100 rounded-xl animate-pulse"></div>
+                </div>
+                <div id="todo-list-section" class="mt-8 p-6 bg-white rounded-2xl shadow-xl transition-all duration-300">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Global To-Do List</h2>
+                    <form id="add-todo-form-inline" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input type="text" id="todo-task" placeholder="Task description" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="text" id="todo-assignee" placeholder="Assignee" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="date" id="todo-due-date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <button type="submit" class="w-full px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                            Add Task
+                        </button>
+                    </form>
+                    <div id="todo-list-container" class="mt-4 space-y-2">
+                        <!-- To-Do items will be rendered here -->
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('add-project-btn').addEventListener('click', () => showModal('add-project-modal'));
+            document.getElementById('export-btn').addEventListener('click', () => exportToCSV());
+            document.getElementById('add-todo-form-inline').addEventListener('submit', addGlobalTodo);
+            
+            const projectsList = document.getElementById('projects-list');
+
+            if (!isAuthReady) {
+                return;
+            }
+
+            const projectsRef = collection(db, `artifacts/${appId}/public/data/projects`);
+            onSnapshot(projectsRef, (snapshot) => {
+                projectsList.innerHTML = '';
+                if (snapshot.empty) {
+                    projectsList.innerHTML = `<p class="col-span-3 text-center text-gray-500">No projects yet. Add one to get started!</p>`;
+                    return;
+                }
+                snapshot.forEach((doc) => {
+                    const project = doc.data();
+                    const projectId = doc.id;
+                    const card = document.createElement('div');
+                    card.className = "p-6 bg-gray-50 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200";
+                    card.innerHTML = `<h3 class="text-xl font-bold text-gray-800 truncate">${project.name}</h3>`;
+                    card.addEventListener('click', () => navigateTo('projectDetail', projectId));
+                    projectsList.appendChild(card);
+                });
+            }, (error) => {
+                console.error("Error fetching projects:", error);
+                projectsList.innerHTML = `<p class="col-span-3 text-red-500 text-center">Failed to load projects.</p>`;
+            });
+
+            renderGlobalTodoList();
+        }
+        
+        function renderProjectDetail(projectId) {
+            if (!projectId) {
+                navigateTo('dashboard');
+                return;
+            }
+
+            let viewContent = '';
+            let navigationButtons = `
+                <button id="show-finance-btn" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-medium shadow-md hover:bg-gray-300 transition-colors duration-200">
+                    Financials
+                </button>
+                <button id="show-timeline-btn" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-medium shadow-md hover:bg-gray-300 transition-colors duration-200">
+                    Timeline
+                </button>
+            `;
+
+            if (appState.projectDetailView === 'finance') {
+                viewContent = `
+                    <div id="finance-view">
+                        <div id="summary-section" class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                            <div class="p-6 bg-gray-50 rounded-xl shadow-md border border-gray-200">
+                                <h3 class="text-sm text-gray-500 font-medium uppercase">Overall Budget</h3>
+                                <p id="total-budget" class="text-2xl font-bold text-indigo-600 mt-1">$0.00</p>
+                            </div>
+                            <div class="p-6 bg-gray-50 rounded-xl shadow-md border border-gray-200">
+                                <h3 class="text-sm text-gray-500 font-medium uppercase">Total Spent</h3>
+                                <p id="total-spent" class="text-2xl font-bold text-red-600 mt-1">$0.00</p>
+                            </div>
+                            <div class="p-6 bg-gray-50 rounded-xl shadow-md border border-gray-200">
+                                <h3 class="text-sm text-gray-500 font-medium uppercase">Remaining Budget</h3>
+                                <p id="remaining-budget" class="text-2xl font-bold text-green-600 mt-1">$0.00</p>
+                            </div>
+                        </div>
+
+                        <div id="charts-section" class="bg-white p-6 rounded-2xl shadow-md border border-gray-200 flex flex-col items-center">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">Financial Overview</h3>
+                            <canvas id="projectPieChart" class="w-full h-80"></canvas>
+                        </div>
+
+                        <div id="sections-costs-container" class="space-y-8">
+                            <!-- Sections and costs will be rendered here -->
+                        </div>
+                    </div>
+                `;
+                navigationButtons = `
+                    <button id="show-finance-btn" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                        Financials
+                    </button>
+                    <button id="show-timeline-btn" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-medium shadow-md hover:bg-gray-300 transition-colors duration-200">
+                        Timeline
+                    </button>
+                `;
+            } else if (appState.projectDetailView === 'timeline') {
+                viewContent = `
+                    <div id="timeline-view">
+                        <div id="timeline-container" class="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">Proposed & Actual Timeline</h3>
+                            <div id="timeline-chart-container" class="relative">
+                                <div id="timeline-chart" class="flex flex-col space-y-4">
+                                    <!-- Timeline bars will be rendered here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                navigationButtons = `
+                    <button id="show-finance-btn" class="px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-medium shadow-md hover:bg-gray-300 transition-colors duration-200">
+                        Financials
+                    </button>
+                    <button id="show-timeline-btn" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                        Timeline
+                    </button>
+                `;
+            }
+
+            mainContent.innerHTML = `
+                <div id="project-detail-container" class="space-y-6">
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-end">
+                        <h2 id="project-name-display" class="text-3xl font-bold text-gray-800">Loading...</h2>
+                        <div class="flex flex-col md:flex-row md:space-x-4">
+                            <button id="back-btn" class="mt-4 md:mt-0 px-6 py-3 bg-gray-600 text-white rounded-xl font-medium shadow-md hover:bg-gray-700 transition-colors duration-200">
+                                Back
+                            </button>
+                            <button id="add-cost-btn" class="mt-4 md:mt-0 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                                + Add New Cost
+                            </button>
+                            <button id="add-new-section-btn" class="mt-4 md:mt-0 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                                + Add New Section
+                            </button>
+                             <button id="edit-budget-btn" class="mt-4 md:mt-0 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                                Edit Budgets
+                            </button>
+                             <button id="edit-timeline-btn" class="mt-4 md:mt-0 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium shadow-md hover:bg-indigo-700 transition-colors duration-200">
+                                Edit Timeline
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-row space-x-4">
+                        ${navigationButtons}
+                    </div>
+
+                    ${viewContent}
+                </div>
+            `;
+
+            if (appState.projectDetailView === 'finance') {
+                document.getElementById('show-timeline-btn').addEventListener('click', () => navigateTo('projectDetail', projectId, 'timeline'));
+            } else if (appState.projectDetailView === 'timeline') {
+                document.getElementById('show-finance-btn').addEventListener('click', () => navigateTo('projectDetail', projectId, 'finance'));
+            }
+
+            document.getElementById('back-btn').addEventListener('click', () => navigateTo('dashboard'));
+            document.getElementById('add-cost-btn').addEventListener('click', () => showModal('add-cost-modal'));
+            document.getElementById('add-new-section-btn').addEventListener('click', () => showModal('add-section-modal'));
+            document.getElementById('edit-budget-btn').addEventListener('click', () => showEditBudgetModal(projectId));
+            document.getElementById('edit-timeline-btn').addEventListener('click', () => showEditTimelineModal(projectId));
+
+            const projectNameDisplay = document.getElementById('project-name-display');
+
+            if (!isAuthReady) return;
+
+            // Real-time listener for project data
+            const projectDocRef = doc(db, `artifacts/${appId}/public/data/projects`, projectId);
+            onSnapshot(projectDocRef, (doc) => {
+                if (doc.exists()) {
+                    const project = doc.data();
+                    projectNameDisplay.textContent = project.name;
+                    if (appState.projectDetailView === 'finance') {
+                         renderSectionsAndCharts(project);
+                    } else if (appState.projectDetailView === 'timeline') {
+                         renderTimeline(project);
+                    }
+                } else {
+                    console.error("Project not found:", projectId);
+                    navigateTo('dashboard');
+                }
+            }, (error) => {
+                console.error("Error fetching project data:", error);
+                projectNameDisplay.textContent = "Error loading project.";
+            });
+
+            // Real-time listener for cost data
+            const costsRef = collection(db, `artifacts/${appId}/public/data/costs`);
+            const q = query(costsRef, where("projectId", "==", projectId));
+            onSnapshot(q, (snapshot) => {
+                // This will be handled by renderSectionsAndCharts
+            }, (error) => {
+                console.error("Error fetching costs:", error);
+            });
+
+            let myCharts = {};
+
+            function renderSectionsAndCharts(projectData) {
+                const totalBudgetDisplay = document.getElementById('total-budget');
+                const totalSpentDisplay = document.getElementById('total-spent');
+                const remainingBudgetDisplay = document.getElementById('remaining-budget');
+                const sectionsCostsContainer = document.getElementById('sections-costs-container');
+
+                const costsRef = collection(db, `artifacts/${appId}/public/data/costs`);
+                const q = query(costsRef, where("projectId", "==", projectId));
+                
+                onSnapshot(q, (snapshot) => {
+                    const costs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    let totalProjectBudget = parseFloat(projectData.overallBudget) || 0;
+                    let totalProjectSpend = 0;
+                    let overallSpendBySection = {};
+
+                    sectionsCostsContainer.innerHTML = '';
+                    const sections = Object.keys(projectData.sections);
+                    
+                    // Populate the section select box for the add cost modal
+                    const costSectionSelect = document.getElementById('cost-section');
+                    costSectionSelect.innerHTML = sections.map(s => `<option value="${s}">${s}</option>`).join('');
+
+                    if (sections.length === 0) {
+                        sectionsCostsContainer.innerHTML = `<p class="text-center text-gray-500">No sections defined for this project.</p>`;
+                        return;
+                    }
+                    
+                    sections.forEach(sectionName => {
+                        const sectionBudget = parseFloat(projectData.sections[sectionName]) || 0;
+                        const sectionCosts = costs.filter(c => c.section === sectionName);
+                        const sectionTotalSpent = sectionCosts.reduce((sum, cost) => sum + parseFloat(cost.amount), 0);
+                        const sectionRemaining = sectionBudget - sectionTotalSpent;
+                        totalProjectSpend += sectionTotalSpent;
+                        overallSpendBySection[sectionName] = sectionTotalSpent;
+
+                        const sectionDiv = document.createElement('div');
+                        sectionDiv.className = "bg-white p-6 rounded-2xl shadow-md border border-gray-200";
+                        sectionDiv.innerHTML = `
+                            <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
+                                <h3 class="text-xl font-bold text-gray-800">${sectionName}</h3>
+                                <div class="mt-2 md:mt-0 flex items-center space-x-4">
+                                    <div class="flex flex-col text-sm text-gray-600">
+                                        <span class="font-medium">Budget: <span class="text-indigo-600">$${sectionBudget.toFixed(2)}</span></span>
+                                        <span class="font-medium">Spent: <span class="text-red-600">$${sectionTotalSpent.toFixed(2)}</span></span>
+                                    </div>
+                                    <span class="text-xl font-bold ${sectionRemaining >= 0 ? 'text-green-600' : 'text-red-600'}">
+                                        $${sectionRemaining.toFixed(2)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-100 rounded-lg p-4 space-y-2">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Costs for this section:</h4>
+                                <div class="flex flex-col md:flex-row md:space-x-4">
+                                    <div class="md:w-1/2">
+                                        ${sectionCosts.length > 0 ? 
+                                            sectionCosts.map(cost => `
+                                                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border border-gray-200 mb-2">
+                                                    <span class="text-sm text-gray-700">${cost.description}</span>
+                                                    <span class="font-medium text-gray-800">$${parseFloat(cost.amount).toFixed(2)}</span>
+                                                </div>
+                                            `).join('')
+                                            : `<p class="text-xs text-gray-500">No costs added yet.</p>`
+                                        }
+                                    </div>
+                                    <div class="md:w-1/2 mt-4 md:mt-0 flex items-center justify-center">
+                                         ${sectionCosts.length > 0 ?
+                                            `<canvas id="section-pie-chart-${sectionName.replace(/\s/g, '-')}" class="h-48 w-48"></canvas>`
+                                            : `<p class="text-xs text-gray-500">Add a cost to see a chart.</p>`
+                                         }
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        sectionsCostsContainer.appendChild(sectionDiv);
+                        
+                        if (sectionCosts.length > 0) {
+                            renderSectionChart(sectionName, sectionCosts);
+                        }
+                    });
+                    
+                    totalBudgetDisplay.textContent = `$${totalProjectBudget.toFixed(2)}`;
+                    totalSpentDisplay.textContent = `$${totalProjectSpend.toFixed(2)}`;
+                    const totalRemaining = totalProjectBudget - totalProjectSpend;
+                    remainingBudgetDisplay.textContent = `$${totalRemaining.toFixed(2)}`;
+                    remainingBudgetDisplay.className = `text-2xl font-bold mt-1 ${totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'}`;
+
+                    renderProjectPieChart(overallSpendBySection);
+                });
+            }
+
+            function renderTimeline(projectData) {
+                const timelineChartContainer = document.getElementById('timeline-chart');
+                timelineChartContainer.innerHTML = '';
+
+                const sections = Object.keys(projectData.sections);
+                const timelineData = projectData.timeline || {};
+
+                if (sections.length === 0) {
+                    timelineChartContainer.innerHTML = `<p class="text-center text-gray-500">No sections defined for this project.</p>`;
+                    return;
+                }
+
+                // Get all dates to determine the scale of the timeline
+                let allDates = [];
+                sections.forEach(section => {
+                    const proposed = timelineData[section]?.proposed;
+                    const actual = timelineData[section]?.actual;
+                    if (proposed?.start) allDates.push(new Date(proposed.start));
+                    if (proposed?.end) allDates.push(new Date(proposed.end));
+                    if (actual?.start) allDates.push(new Date(actual.start));
+                    if (actual?.end) allDates.push(new Date(actual.end));
+                });
+
+                if (allDates.length === 0) {
+                    timelineChartContainer.innerHTML = `<p class="text-center text-gray-500">No timeline data available. Click "Edit Timeline" to add one.</p>`;
+                    return;
+                }
+
+                const minDate = new Date(Math.min(...allDates));
+                const maxDate = new Date(Math.max(...allDates));
+                const totalDuration = maxDate.getTime() - minDate.getTime();
+
+                sections.forEach(sectionName => {
+                    const sectionTimeline = timelineData[sectionName];
+                    const proposed = sectionTimeline?.proposed;
+                    const actual = sectionTimeline?.actual;
+
+                    const sectionDiv = document.createElement('div');
+                    sectionDiv.className = "flex flex-col mb-4";
+                    sectionDiv.innerHTML = `<h4 class="font-semibold text-gray-700">${sectionName}</h4>`;
+
+                    if (proposed?.start && proposed?.end) {
+                        const proposedStartDate = new Date(proposed.start);
+                        const proposedEndDate = new Date(proposed.end);
+                        const proposedStartOffset = (proposedStartDate.getTime() - minDate.getTime()) / totalDuration * 100;
+                        const proposedWidth = (proposedEndDate.getTime() - proposedStartDate.getTime()) / totalDuration * 100;
+                        
+                        const proposedBar = document.createElement('div');
+                        proposedBar.className = "timeline-bar bg-blue-400 opacity-70 flex items-center";
+                        proposedBar.style.width = `${proposedWidth}%`;
+                        proposedBar.style.marginLeft = `${proposedStartOffset}%`;
+                        proposedBar.innerHTML = `<span class="ml-2 text-white font-medium text-xs">Proposed</span>`;
+                        sectionDiv.appendChild(proposedBar);
+                    }
+
+                    if (actual?.start && actual?.end) {
+                        const actualStartDate = new Date(actual.start);
+                        const actualEndDate = new Date(actual.end);
+                        const actualStartOffset = (actualStartDate.getTime() - minDate.getTime()) / totalDuration * 100;
+                        const actualWidth = (actualEndDate.getTime() - actualStartDate.getTime()) / totalDuration * 100;
+
+                        const actualBar = document.createElement('div');
+                        actualBar.className = "timeline-bar bg-green-500 flex items-center";
+                        actualBar.style.width = `${actualWidth}%`;
+                        actualBar.style.marginLeft = `${actualStartOffset}%`;
+                        actualBar.innerHTML = `<span class="ml-2 text-white font-medium text-xs">Actual</span>`;
+                        sectionDiv.appendChild(actualBar);
+                    }
+
+                    timelineChartContainer.appendChild(sectionDiv);
+                });
+            }
+            
+            function generateColors(count) {
+                const colors = [];
+                for (let i = 0; i < count; i++) {
+                    colors.push(`hsl(${i * (360 / count)}, 70%, 50%)`);
+                }
+                return colors;
+            }
+
+            function renderProjectPieChart(data) {
+                const ctx = document.getElementById('projectPieChart');
+                if (!ctx) return;
+                
+                const labels = Object.keys(data);
+                const values = Object.values(data);
+                const colors = generateColors(labels.length);
+
+                // Destroy old chart if it exists
+                if (myCharts['projectPieChart']) {
+                    myCharts['projectPieChart'].destroy();
+                }
+
+                myCharts['projectPieChart'] = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: colors,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Overall Spending by Section'
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderSectionChart(sectionName, costs) {
+                const chartId = `section-pie-chart-${sectionName.replace(/\s/g, '-')}`;
+                const ctx = document.getElementById(chartId);
+                if (!ctx) return;
+                
+                const labels = costs.map(c => c.description);
+                const values = costs.map(c => parseFloat(c.amount));
+                const colors = generateColors(labels.length);
+
+                if (myCharts[chartId]) {
+                    myCharts[chartId].destroy();
+                }
+
+                myCharts[chartId] = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: colors,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: `Spending breakdown for ${sectionName}`
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        async function showEditBudgetModal(projectId) {
+            const projectDocRef = doc(db, `artifacts/${appId}/public/data/projects`, projectId);
+            const docSnap = await getDoc(projectDocRef);
+            if (docSnap.exists()) {
+                const project = docSnap.data();
+                document.getElementById('edit-overall-budget').value = project.overallBudget;
+                
+                editSectionsContainer.innerHTML = '';
+                for (const section in project.sections) {
+                    const sectionDiv = document.createElement('div');
+                    sectionDiv.className = 'space-y-2';
+                    sectionDiv.innerHTML = `
+                        <label for="edit-budget-${section.replace(/\s/g, '-')}" class="block text-gray-700 font-medium mb-1">${section} Budget ($)</label>
+                        <input type="number" id="edit-budget-${section.replace(/\s/g, '-')}" name="editSectionBudget" data-section="${section}" value="${project.sections[section]}" min="0" step="0.01" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    `;
+                    editSectionsContainer.appendChild(sectionDiv);
+                }
+                showModal('edit-budget-modal');
+            }
+        }
+
+        async function showEditTimelineModal(projectId) {
+            const projectDocRef = doc(db, `artifacts/${appId}/public/data/projects`, projectId);
+            const docSnap = await getDoc(projectDocRef);
+            if (docSnap.exists()) {
+                const project = docSnap.data();
+                const sections = Object.keys(project.sections);
+                const timeline = project.timeline || {};
+                
+                timelineSectionsContainer.innerHTML = '';
+                sections.forEach(section => {
+                    const sectionTimeline = timeline[section] || {};
+                    const proposed = sectionTimeline.proposed || {};
+                    const actual = sectionTimeline.actual || {};
+
+                    const sectionDiv = document.createElement('div');
+                    sectionDiv.className = 'p-4 bg-gray-100 rounded-lg';
+                    sectionDiv.innerHTML = `
+                        <h4 class="font-bold text-gray-800 mb-2">${section}</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-gray-700">Proposed Start</label>
+                                <input type="date" class="proposed-start w-full px-2 py-1 rounded border border-gray-300" data-section="${section}" value="${proposed.start || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-700">Proposed End</label>
+                                <input type="date" class="proposed-end w-full px-2 py-1 rounded border border-gray-300" data-section="${section}" value="${proposed.end || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-700">Actual Start</label>
+                                <input type="date" class="actual-start w-full px-2 py-1 rounded border border-gray-300" data-section="${section}" value="${actual.start || ''}">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-700">Actual End</label>
+                                <input type="date" class="actual-end w-full px-2 py-1 rounded border border-gray-300" data-section="${section}" value="${actual.end || ''}">
+                            </div>
+                        </div>
+                    `;
+                    timelineSectionsContainer.appendChild(sectionDiv);
+                });
+                showModal('edit-timeline-modal');
+            }
+        }
+        
+        async function addGlobalTodo(e) {
+            e.preventDefault();
+            const task = document.getElementById('todo-task').value;
+            const assignee = document.getElementById('todo-assignee').value;
+            const dueDate = document.getElementById('todo-due-date').value;
+
+            if (!task || !assignee || !dueDate) {
+                console.error("Please fill in all fields for the to-do item.");
+                return;
+            }
+
+            try {
+                const todosRef = collection(db, `artifacts/${appId}/public/data/todos`);
+                await addDoc(todosRef, {
+                    task,
+                    assignee,
+                    dueDate,
+                    completed: false,
+                    createdAt: new Date()
+                });
+                console.log("New global to-do added successfully!");
+                document.getElementById('add-todo-form-inline').reset();
+            } catch (error) {
+                console.error("Error adding new global to-do:", error);
+            }
+        }
+
+        function renderGlobalTodoList() {
+            const todoListContainer = document.getElementById('todo-list-container');
+            if (!todoListContainer) return;
+
+            todoListContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-12 text-gray-500">
+                    <svg class="animate-spin h-8 w-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="mt-4">Loading to-do list...</span>
+                </div>
+            `;
+
+            const todosRef = collection(db, `artifacts/${appId}/public/data/todos`);
+            const q = query(todosRef);
+            
+            onSnapshot(q, (snapshot) => {
+                todoListContainer.innerHTML = '';
+                if (snapshot.empty) {
+                    todoListContainer.innerHTML = `<p class="text-center text-gray-500">No tasks on this list. Add one above!</p>`;
+                    return;
+                }
+                snapshot.forEach(doc => {
+                    const todo = doc.data();
+                    const todoId = doc.id;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = `p-4 rounded-xl shadow-sm border border-gray-200 flex items-center justify-between ${todo.completed ? 'bg-green-100' : 'bg-white'}`;
+                    itemDiv.innerHTML = `
+                        <div class="flex items-center">
+                            <input type="checkbox" class="h-5 w-5 rounded text-indigo-600 focus:ring-indigo-500 border-gray-300 mr-4 cursor-pointer" ${todo.completed ? 'checked' : ''} data-id="${todoId}">
+                            <div>
+                                <p class="font-medium text-gray-800 ${todo.completed ? 'line-through text-gray-500' : ''}">${todo.task}</p>
+                                <p class="text-sm text-gray-500 mt-1">
+                                    For: <span class="font-medium">${todo.assignee}</span> | Due: <span class="font-medium">${todo.dueDate}</span>
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    todoListContainer.appendChild(itemDiv);
+                    
+                    itemDiv.querySelector('input[type="checkbox"]').addEventListener('change', async (e) => {
+                        const todoId = e.target.dataset.id;
+                        const completed = e.target.checked;
+                        const todoDocRef = doc(db, `artifacts/${appId}/public/data/todos`, todoId);
+                        try {
+                            await updateDoc(todoDocRef, { completed: completed });
+                            console.log(`Todo ${todoId} updated successfully.`);
+                        } catch (error) {
+                            console.error("Error updating todo:", error);
+                        }
+                    });
+                });
+            }, (error) => {
+                console.error("Error fetching todos:", error);
+                todoListContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load to-do list.</p>`;
+            });
+        }
+        
+        // --- Export to CSV Function ---
+        async function exportToCSV() {
+            try {
+                const projectsRef = collection(db, `artifacts/${appId}/public/data/projects`);
+                const costsRef = collection(db, `artifacts/${appId}/public/data/costs`);
+
+                const projectsSnapshot = await getDocs(projectsRef);
+                const costsSnapshot = await getDocs(costsRef);
+
+                const projects = projectsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const costs = costsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Create a header for the CSV
+                let csvContent = "Project Name,Overall Budget,Section,Section Budget,Cost Description,Cost Amount\n";
+
+                projects.forEach(project => {
+                    const projectCosts = costs.filter(cost => cost.projectId === project.id);
+                    const sections = Object.keys(project.sections);
+
+                    sections.forEach(sectionName => {
+                        const sectionBudget = project.sections[sectionName];
+                        const sectionCosts = projectCosts.filter(cost => cost.section === sectionName);
+
+                        if (sectionCosts.length > 0) {
+                            sectionCosts.forEach(cost => {
+                                csvContent += `"${project.name}","${project.overallBudget}","${sectionName}","${sectionBudget}","${cost.description}","${cost.amount}"\n`;
+                            });
+                        } else {
+                            // If no costs for a section, still list the section and its budget
+                            csvContent += `"${project.name}","${project.overallBudget}","${sectionName}","${sectionBudget}","",""\n`;
+                        }
+                    });
+                });
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", "project_costs.csv");
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                console.log("Export successful!");
+
+            } catch (e) {
+                console.error("Error during CSV export:", e);
+            }
+        }
+
+        // --- Event Listeners and Form Submission ---
+        
+        // Modal functions
+        function showModal(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
+
+        function hideModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // Add Project Modal Logic
+            document.getElementById('add-section-btn').addEventListener('click', () => {
+                const newSection = document.createElement('div');
+                newSection.className = "flex items-center space-x-2";
+                newSection.innerHTML = `
+                    <input type="text" placeholder="Section name" class="section-name flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <input type="number" placeholder="Budgeted amount" min="0" step="0.01" class="section-budget w-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <button type="button" class="remove-section text-red-500 hover:text-red-700 transition-colors duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.035 21H7.965a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                `;
+                sectionsContainer.appendChild(newSection);
+                newSection.querySelector('.remove-section').addEventListener('click', (e) => {
+                    e.target.closest('.flex').remove();
+                });
+            });
+
+            addProjectForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const projectName = document.getElementById('project-name').value;
+                const overallBudget = parseFloat(document.getElementById('overall-budget').value);
+                const sections = {};
+                const sectionInputs = sectionsContainer.querySelectorAll('.section-name');
+                const budgetInputs = sectionsContainer.querySelectorAll('.section-budget');
+                
+                sectionInputs.forEach((input, index) => {
+                    const name = input.value.trim();
+                    const budget = parseFloat(budgetInputs[index].value);
+                    if (name && !isNaN(budget)) {
+                        sections[name] = budget;
+                    }
+                });
+                
+                const errorMessageDiv = document.getElementById('add-project-error-message');
+                if (Object.keys(sections).length === 0) {
+                    errorMessageDiv.textContent = "Please add at least one section with a valid budget.";
+                    errorMessageDiv.classList.remove('hidden');
+                    return;
+                } else {
+                    errorMessageDiv.classList.add('hidden');
+                }
+
+                try {
+                    const projectsRef = collection(db, `artifacts/${appId}/public/data/projects`);
+                    await addDoc(projectsRef, {
+                        name: projectName,
+                        overallBudget: overallBudget,
+                        sections: sections,
+                        timeline: {},
+                        ownerId: userId,
+                        createdAt: new Date()
+                    });
+                    console.log("New project added successfully!");
+                    hideModal('add-project-modal');
+                    addProjectForm.reset();
+                } catch (e) {
+                    console.error("Error adding document: ", e);
+                }
+            });
+            
+            // Add Cost Modal Logic
+            addCostForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const section = document.getElementById('cost-section').value;
+                const description = document.getElementById('cost-description').value;
+                const amount = parseFloat(document.getElementById('cost-amount').value);
+                
+                if (!section || !description || isNaN(amount)) {
+                    console.error("Please fill in all fields correctly.");
+                    return;
+                }
+                
+                try {
+                    const costsRef = collection(db, `artifacts/${appId}/public/data/costs`);
+                    await addDoc(costsRef, {
+                        projectId: appState.currentProjectId,
+                        section: section,
+                        description: description,
+                        amount: amount,
+                        createdAt: new Date()
+                    });
+                    console.log("New cost added successfully!");
+                    hideModal('add-cost-modal');
+                    addCostForm.reset();
+                } catch (e) {
+                    console.error("Error adding cost: ", e);
+                }
+            });
+
+            // Add new section to existing project
+            addSectionForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const newSectionName = document.getElementById('new-section-name').value;
+                const newSectionBudget = parseFloat(document.getElementById('new-section-budget').value);
+
+                if (!newSectionName || isNaN(newSectionBudget)) {
+                    console.error("Please provide a valid section name and budget.");
+                    return;
+                }
+
+                try {
+                    const projectDocRef = doc(db, `artifacts/${appId}/public/data/projects`, appState.currentProjectId);
+                    await updateDoc(projectDocRef, {
+                        [`sections.${newSectionName}`]: newSectionBudget
+                    });
+                    console.log("New section added successfully!");
+                    hideModal('add-section-modal');
+                    addSectionForm.reset();
+                } catch (e) {
+                    console.error("Error adding new section: ", e);
+                }
+            });
+
+            // Edit budget form submission
+            editBudgetForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const overallBudget = parseFloat(document.getElementById('edit-overall-budget').value);
+                const updatedSections = {};
+                const sectionInputs = editSectionsContainer.querySelectorAll('input[name="editSectionBudget"]');
+                sectionInputs.forEach(input => {
+                    const sectionName = input.dataset.section;
+                    updatedSections[sectionName] = parseFloat(input.value);
+                });
+
+                try {
+                    const projectDocRef = doc(db, `artifacts/${appId}/public/data/projects`, appState.currentProjectId);
+                    await updateDoc(projectDocRef, {
+                        overallBudget: overallBudget,
+                        sections: updatedSections
+                    });
+                    console.log("Budgets updated successfully!");
+                    hideModal('edit-budget-modal');
+                } catch (e) {
+                    console.error("Error updating budgets: ", e);
+                }
+            });
+
+            // Edit timeline form submission
+            editTimelineForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const updatedTimeline = {};
+                const sections = timelineSectionsContainer.querySelectorAll('.p-4');
+                
+                sections.forEach(sectionDiv => {
+                    const sectionName = sectionDiv.querySelector('input.proposed-start').dataset.section;
+                    const proposedStart = sectionDiv.querySelector('.proposed-start').value;
+                    const proposedEnd = sectionDiv.querySelector('.proposed-end').value;
+                    const actualStart = sectionDiv.querySelector('.actual-start').value;
+                    const actualEnd = sectionDiv.querySelector('.actual-end').value;
+
+                    updatedTimeline[sectionName] = {
+                        proposed: {
+                            start: proposedStart || null,
+                            end: proposedEnd || null
+                        },
+                        actual: {
+                            start: actualStart || null,
+                            end: actualEnd || null
+                        }
+                    };
+                });
+                
+                try {
+                    const projectDocRef = doc(db, `artifacts/${appId}/public/data/projects`, appState.currentProjectId);
+                    await updateDoc(projectDocRef, {
+                        timeline: updatedTimeline
+                    });
+                    console.log("Timeline updated successfully!");
+                    hideModal('edit-timeline-modal');
+                } catch (e) {
+                    console.error("Error updating timeline: ", e);
+                }
+            });
+            
+            // Close modals when clicking outside
+            window.addEventListener('click', (e) => {
+                if (e.target == addProjectModal) {
+                    hideModal('add-project-modal');
+                }
+                if (e.target == addCostModal) {
+                    hideModal('add-cost-modal');
+                }
+                if (e.target == addSectionModal) {
+                    hideModal('add-section-modal');
+                }
+                if (e.target == editBudgetModal) {
+                    hideModal('edit-budget-modal');
+                }
+                if (e.target == editTimelineModal) {
+                    hideModal('edit-timeline-modal');
+                }
+            });
+            
+            // Cancel buttons for modals
+            document.getElementById('cancel-project-btn').addEventListener('click', () => {
+                hideModal('add-project-modal');
+                document.getElementById('add-project-error-message').classList.add('hidden');
+            });
+            document.getElementById('cancel-cost-btn').addEventListener('click', () => hideModal('add-cost-modal'));
+            document.getElementById('cancel-new-section-btn').addEventListener('click', () => hideModal('add-section-modal'));
+            document.getElementById('cancel-edit-budget-btn').addEventListener('click', () => hideModal('edit-budget-modal'));
+            document.getElementById('cancel-edit-timeline-btn').addEventListener('click', () => hideModal('edit-timeline-modal'));
+
+            // Copy User ID to clipboard
+            userIdDisplay.addEventListener('click', () => {
+                const tempInput = document.createElement('input');
+                tempInput.value = userId;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                
+                const toast = document.getElementById('clipboard-toast');
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.add('hidden');
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
