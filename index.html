@@ -203,7 +203,31 @@
         
         // Global variables provided by the Canvas environment
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+     // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBC4G_uNoPu0zjkDZGzeDlQxfE6EoBdAkw",
+  authDomain: "project-tracker-c1590.firebaseapp.com",
+  projectId: "project-tracker-c1590",
+  storageBucket: "project-tracker-c1590.firebasestorage.app",
+  messagingSenderId: "30443774938",
+  appId: "1:30443774938:web:bbdbff2895ae7618cf56e3",
+  measurementId: "G-0LKS4LRRYR"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+        const firebaseConfig = {}; // 
+
+        // END FIREBASE CONFIG
+
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         // --- Firebase Initialization and Auth ---
@@ -215,7 +239,7 @@
         // State variables and DOM element references
         let appState = {
             view: 'dashboard',
-            projectDetailView: 'finance', // 'finance', 'timeline', or 'todo'
+            projectDetailView: 'finance', // 'finance' or 'timeline'
             currentProjectId: null
         };
         
@@ -245,10 +269,11 @@
                     auth = getAuth(app);
                     firebaseInitialized = true;
                 } else {
-                    console.error("Firebase config is not available. Please check the Canvas environment.");
+                    console.error("Firebase config is not available. The application cannot connect to the database.");
                     if (mainContent && loadingIndicator) {
                       mainContent.innerHTML = `<div class="p-8 text-center text-red-500">
                                                   <p>Error: Firebase configuration not found. The application cannot connect to the database.</p>
+                                                  <p class="mt-4 text-sm">Please follow the instructions to set up your Firebase project and paste the config into the code.</p>
                                               </div>`;
                       loadingIndicator.style.display = 'none';
                     }
@@ -358,7 +383,7 @@
             
             const projectsList = document.getElementById('projects-list');
 
-            if (!isAuthReady) {
+            if (!isAuthReady || !firebaseInitialized) {
                 return;
             }
 
@@ -506,7 +531,7 @@
 
             const projectNameDisplay = document.getElementById('project-name-display');
 
-            if (!isAuthReady) return;
+            if (!isAuthReady || !firebaseInitialized) return;
 
             // Real-time listener for project data
             const projectDocRef = doc(db, `artifacts/${appId}/public/data/projects`, projectId);
@@ -1225,3 +1250,4 @@
     </script>
 </body>
 </html>
+
